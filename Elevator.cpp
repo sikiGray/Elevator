@@ -68,7 +68,11 @@ void Psg::InElevator()
 //乘客在所在楼层等待
 void Psg::onwait()
 {
-    wait_psg[infloor - 1].EnQueue(*this);
+    //wait_psg[infloor - 1].EnQueue(*this);
+    if (this->infloor > this->outfloor)
+        wait_down_psg[infloor - 1].EnQueue(*this);
+    else
+        wait_up_psg[infloor - 1].EnQueue(*this);
     cout << (clock() - delay) / TIME << "," << nexttime / TIME << "【乘客】" << ID << "号乘客进入" << infloor << "楼的等待队列。" << endl;
 }
 
@@ -86,14 +90,33 @@ void Psg::PsgGaveUp()
     //T.TimePause();
     for (int i = 0;i < MAXHEIGHT;++i)
     {
-        while (!wait_psg[i].QueueIsEmpty())
+        while (!wait_up_psg[i].QueueIsEmpty())
         {
-            if ((now-delay - wait_psg[i].Front().waitBegin)/TIME > MAXWAITTIEM)
+            if ((now-delay - wait_up_psg[i].Front().waitBegin)/TIME > MAXWAITTIEM)
             {
                 //cout << (now -delay- wait_psg[i].Front().waitBegin) / TIME << endl;
                 //cout << wait_psg[i].Front().waitBegin << endl;
-                n=wait_psg[i].DeQueue();
-                cout << (now - delay) / TIME << "," << nexttime / TIME << "【乘客】" << n.ID << "号乘客离开等待队列" << endl;
+                n=wait_up_psg[i].DeQueue();
+                cout << (now - delay) / TIME << "," << nexttime / TIME << "【乘客】" << n.ID << "号乘客因等待时间过长离开等待队列" << endl;
+                T.TimePause();
+                T.wait(20);
+                T.TimeResume();
+                //system("pause");
+            }
+            else
+                break;
+        }
+        while (!wait_down_psg[i].QueueIsEmpty())
+        {
+            if ((now - delay - wait_down_psg[i].Front().waitBegin) / TIME > MAXWAITTIEM)
+            {
+                //cout << (now -delay- wait_psg[i].Front().waitBegin) / TIME << endl;
+                //cout << wait_psg[i].Front().waitBegin << endl;
+                n = wait_down_psg[i].DeQueue();
+                cout << (now - delay) / TIME << "," << nexttime / TIME << "【乘客】" << n.ID << "号乘客因等待时间过长离开等待队列" << endl;
+                T.TimePause();
+                T.wait(20);
+                T.TimeResume();
                 //system("pause");
             }
             else
@@ -154,15 +177,15 @@ int Psg::New_Psg()
     sum++;
     P.Psg_Infm();//记录乘客信息
     
-    if (nexttime > clock() - delay)
-    {
+    //if (nexttime > clock() - delay)
+    //{
         /***?????????????????????***/
-        nexttime += nexttime + next_psg_time * TIME;
-    }
-    else//计算下一个乘客到来的时刻
-    {
+     //   nexttime += nexttime + next_psg_time * TIME;
+    //}
+    //else//计算下一个乘客到来的时刻
+   // {
         nexttime = clock() - delay + next_psg_time * TIME;
-    }
+    //}
     //判断乘客是要上楼还是下楼
     if (m.infloor > m.outfloor)//下楼
     {
@@ -220,7 +243,8 @@ int Elevator::Elv_Statues()
             cout << "    ";
         cout << " 第" << i << "层：";
         /**-------------------------**/
-        wait_psg[i - 1].QueueTranverse();//遍历输出楼层的等待队列
+        wait_up_psg[i - 1].QueueTranverse();//遍历输出楼层的等待队列
+        wait_down_psg[i - 1].QueueTranverse();
         /**-------------------------**/
         cout << "      丨" << endl;
     }
@@ -257,14 +281,28 @@ int Elevator::Elv_Test()
 //乘客进入电梯
 int Elevator::Elv_PsgIn()
 {
-    //当前楼层的等待队列不为空，且电梯未满
-    while (!wait_psg[nowfloor - 1].QueueIsEmpty() && psg_num < MAXPSG)
+    if (nowstate == idle || nowstate == up)
     {
-        n = wait_psg[nowfloor - 1].DeQueue();//取队头
-        T.wait(25);//一个人进入需要25t
-        n.InElevator();//乘客进入电梯，同时将乘客压入电梯栈
-        psg_num++;
+        //当前楼层的等待队列不为空，且电梯未满
+        while (!wait_up_psg[nowfloor - 1].QueueIsEmpty() && psg_num < MAXPSG)
+        {
+            n = wait_up_psg[nowfloor - 1].DeQueue();//取队头
+            T.wait(25);//一个人进入需要25t
+            n.InElevator();//乘客进入电梯，同时将乘客压入电梯栈
+            psg_num++;
+        }
     }
+    else
+    {
+        while (!wait_down_psg[nowfloor - 1].QueueIsEmpty() && psg_num < MAXPSG)
+        {
+            n = wait_down_psg[nowfloor - 1].DeQueue();//取队头
+            T.wait(25);//一个人进入需要25t
+            n.InElevator();//乘客进入电梯，同时将乘客压入电梯栈
+            psg_num++;
+        }
+    }
+
     return 0;
 }
 
@@ -305,7 +343,7 @@ int Elevator::Elv_Up()
     E.Elv_Statues();
     cout << (clock() - delay) / TIME << "," << nexttime / TIME << "【电梯运行中】" << "现在上升到第" << nowfloor << "层" << endl;
    
-    req_floor[nowfloor] = 0;
+    //req_floor[nowfloor] = 0;
 
     moved= 1;
     return 0;
@@ -333,7 +371,7 @@ int Elevator::Elv_Down()
     E.Elv_Statues();
     cout << (clock() - delay) / TIME << "," << nexttime / TIME << "【电梯运行中】" << "现在下降到了第" << nowfloor << "层" << endl;
 
-    req_floor[nowfloor] = 0;
+    //req_floor[nowfloor] = 0;
     moved= 1;
     return 0;
 }
@@ -349,7 +387,7 @@ int Elevator::Elv_SpendUp()
 int Elevator::Up_SlowDown()
 {
     cout << (clock() - delay) / TIME << "," << nexttime / TIME << "【电梯运行中】" << "正在减速..." << endl;
-    T.wait(14);//电梯上升减速需要15t
+    T.wait(14);//电梯上升减速需要14t
     return 0;
 }
 
@@ -389,7 +427,7 @@ int Elevator::Elv_Work()
     {
         for (nowflag = nowfloor + 1;nowflag <= MAXHEIGHT;nowflag++)
         {
-            if (req_floor[nowflag] == 1 || req_up[nowflag] == 1 || req_down[nowflag] == 1 || (elv_psg[nowflag - 1].StackIsEmpty() == 0) || wait_psg[nowflag-1].QueueIsEmpty() == 0)
+            if (req_floor[nowflag] == 1 || req_up[nowflag] == 1 || req_down[nowflag] == 1 || (elv_psg[nowflag - 1].StackIsEmpty() == 0) || wait_up_psg[nowflag-1].QueueIsEmpty() == 0||wait_down_psg[nowflag-1].QueueIsEmpty()==0)
             {
                 upflag = 1;
                 break;
@@ -405,7 +443,7 @@ int Elevator::Elv_Work()
         //判断当前楼层的下层楼层是否存在请求
         for (nowflag = nowfloor - 1;nowflag >= 1;nowflag--)
         {
-            if (req_floor[nowflag] == 1 || req_up[nowflag] == 1 || req_down[nowflag] == 1 || (elv_psg[nowflag - 1].StackIsEmpty() == 0) || wait_psg[nowflag - 1].QueueIsEmpty() == 0)
+            if (req_floor[nowflag] == 1 || req_up[nowflag] == 1 || req_down[nowflag] == 1 || (elv_psg[nowflag - 1].StackIsEmpty() == 0) || wait_up_psg[nowflag - 1].QueueIsEmpty() == 0 || wait_down_psg[nowflag - 1].QueueIsEmpty() == 0)
             {
                 downflag = 1;
                 break;
@@ -424,6 +462,7 @@ int Elevator::Elv_Work()
             else
             {
                 nowstate = down;
+                E.Elv_SpendUp();
                 E.Elv_Down();//电梯开始下降
             }
         }
@@ -447,6 +486,7 @@ int Elevator::Elv_Work()
             else
             {
                 nowstate = up;
+                E.Elv_SpendUp();
                 E.Elv_Up();
             }
         }
@@ -473,13 +513,13 @@ int Elevator::Elv_Work()
             if (upflag == 1)
             {
                 nowstate = up;
-                //E.Elv_SpendUp();//电梯加速
+                E.Elv_SpendUp();//电梯加速
                 E.Elv_Up();
             }
             else
             {
                 nowstate = down;
-                //E.Elv_SpendUp();//电梯加速
+                E.Elv_SpendUp();//电梯加速
                 E.Elv_Down();
             }
         }
@@ -490,17 +530,11 @@ int Elevator::Elv_Work()
 //电梯控制函数
 int Elevator::Elv_Control()
 {
-    /*
-    if ((clock() - delay) >= nexttime)//乘客到来
-    {
-        P.New_Psg();//新增乘客
-        return 0;
-    }*/
 
     P.PsgGaveUp();
 
     //电梯开门条件
-    if ((req_floor[nowfloor] != 0) || req_up[nowfloor] != 0 || req_down[nowfloor] != 0 || (elv_psg[nowfloor - 1].StackIsEmpty() == 0) || (wait_psg[nowfloor - 1].QueueIsEmpty() == 0))
+    if ((req_floor[nowfloor] != 0) || req_up[nowfloor] != 0 || req_down[nowfloor] != 0 || (elv_psg[nowfloor - 1].StackIsEmpty() == 0) || wait_up_psg[nowfloor - 1].QueueIsEmpty() == 0 || wait_down_psg[nowfloor - 1].QueueIsEmpty() == 0)
     {
         if ((psg_num == MAXPSG) && (elv_psg[nowfloor - 1].StackIsEmpty() == 1))//电梯的人数已达最大，且该层没有人要出电梯，则不开门
         {
@@ -508,11 +542,20 @@ int Elevator::Elv_Control()
             E.Elv_Work();
             //SlowDownFlag = 1;
         }
+        else if ((nowstate == up && wait_up_psg[nowfloor - 1].QueueIsEmpty() == 1&&req_floor[nowfloor]==0) || (nowstate == down && wait_down_psg[nowfloor - 1].QueueIsEmpty() == 1&&req_floor[nowfloor]==0))//没有同方向请求，无需开门
+        {
+            E.Elv_Work();
+        }
         else//开门
         {
             //SlowDownFlag = 1;
             system("cls");
             E.Elv_Statues();
+
+            if (nowstate == up)
+                E.Up_SlowDown();
+            else if(nowstate==down)
+                E.Down_SlowDown();
 
             E.Elv_OpenDoor();//电梯开门
             
@@ -524,6 +567,8 @@ int Elevator::Elv_Control()
             E.Elv_CloseDoor();//电梯关门
             //E.Elv_SpendUp();//电梯加速
             E.Elv_Work();//电梯开始工作
+            //if (nowstate == up || nowstate == down)
+                //E.Elv_SpendUp();
             //SlowDownFlag = 0;
             
         }
@@ -547,12 +592,12 @@ int Elevator::Elv_Control()
             }
         }
     }
-
-    if ((elv_psg[nowfloor - 1].StackIsEmpty() == 1) || wait_psg[nowfloor - 1].QueueIsEmpty() == 1)
+    /*
+    if ((elv_psg[nowfloor - 1].StackIsEmpty() == 1) || wait_up_psg[nowfloor - 1].QueueIsEmpty() == 1 || wait_down_psg[nowfloor - 1].QueueIsEmpty() == 1)
     {
         req_up[nowfloor] = 0;
         req_down[nowfloor] = 0;
-    }
+    }*/
     return 0;
 }
 

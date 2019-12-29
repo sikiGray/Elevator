@@ -10,7 +10,7 @@ using namespace std;
 #define MAXPSG 13//最大乘客数
 #define TIME 100
 #define MAXHEIGHT 9//最高楼层数
-#define  MAXWAITTIEM 2000//最长等待时间为150t
+#define  MAXWAITTIEM 100//最长等待时间为150t
 
 
 
@@ -85,7 +85,9 @@ public:
 
 
 //等待队列
-LinkedQueue<Psg> wait_psg[MAXHEIGHT];//保存要在对应楼层上电梯的等待的乘客的信息
+//LinkedQueue<Psg> wait_psg[MAXHEIGHT];//保存要在对应楼层上电梯的等待的乘客的信息
+LinkedQueue<Psg> wait_up_psg[MAXHEIGHT];
+LinkedQueue<Psg> wait_down_psg[MAXHEIGHT];
 //电梯栈
 LinkedStack<Psg> elv_psg[MAXHEIGHT];//保存要在对应楼层出电梯的乘客的信息
 
